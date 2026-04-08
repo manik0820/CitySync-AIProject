@@ -103,9 +103,11 @@ def get_priority_score(
     # Predict
     raw_score = float(_model.predict(features_scaled)[0])
 
-    # Clamp to [0, 100] and round
-    return round(max(0.0, min(100.0, raw_score)), 2)
-
+    # After getting raw ML score
+    impact_weight = min((population_density / 5000) * 10, 10)
+    alpha = 0.5
+    P_final = (raw_score * impact_weight) / (estimated_cost ** alpha)
+    return round(max(0.0, min(100.0, P_final)), 2)
 
 # ---------------------------------------------------------------------------
 # Quick test — run this file directly to verify the model loads correctly
