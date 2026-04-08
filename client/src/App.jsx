@@ -1,17 +1,30 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import Navbar from "./components/Navbar"
+import ComplaintForm from "./pages/ComplaintForm"
+import Dashboard from "./pages/Dashboard"
+import Login from "./pages/Login"
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <div className='flex justify-center items-center h-screen'>
-     <div className='text-3xl text-black font-extrabold'>Hello</div>
-    </div>
-  )
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem("token")
+  return token ? children : <Navigate to="/login" />
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Navigate to="/submit" />} />
+          <Route path="/submit" element={<ComplaintForm />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </div>
+    </BrowserRouter>
+  )
+}

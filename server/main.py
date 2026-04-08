@@ -7,6 +7,8 @@ from ml_model import get_priority_score
 
 from database import supabase
 from nlp_module import analyse_complaint
+from passlib.context import CryptContext
+import uuid
 
 load_dotenv()
 
@@ -28,7 +30,14 @@ app.add_middleware(
 # Pydantic schemas
 # These define the shape of data coming IN and going OUT of the API.
 # ---------------------------------------------------------------------------
+class LoginInput(BaseModel):
+    email: str
+    password: str
 
+class OfficerCreate(BaseModel):
+    email: str
+    password: str
+    name: str
 class ComplaintInput(BaseModel):
     """Shape of the JSON body React sends when filing a complaint."""
     description:    str
@@ -46,6 +55,7 @@ class StatusUpdate(BaseModel):
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
 
 @app.get("/health")
 def health_check():
@@ -200,3 +210,41 @@ def delete_complaint(complaint_id: str):
         raise HTTPException(status_code=404, detail="Complaint not found")
 
     return {"message": "Complaint deleted successfully"}
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# ------------------
+
+@app.post("/auth/login")
+def login(body: LoginInput):
+    # Find officer by email
+    response = supabase.table("officers").select("*").eq("email", body.email).execute()
+    
+    if not response.data:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    officer = response.data[0]
+    
+    # Verify password
+    if not pwd_context.verify(body.password, officer["password"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Create a session token
+    session_response = supabase.table("sessions").insert({
+        "officer_id": officer["id"]
+    }).execute()
+    
+    if not session_response.data:
+        raise HTTPException(status_code=500, detail="Failed to create session")
+    
+    token = session_response.data[0]["id"]
+    
+    return {
+        "message": "Login successful",
+        "token": token,
+        "officer": {
+            "id": officer["id"],
+            "name": officer["name"],
+            "email": officer["email"],
+        }
+    }
