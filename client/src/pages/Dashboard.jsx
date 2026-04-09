@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import ComplaintCard from "../components/ComplaintCard"
 
 const STATUS_OPTIONS = [
@@ -51,6 +51,20 @@ export default function Dashboard() {
   useEffect(() => {
     fetchComplaints()
   }, [statusFilter, categoryFilter])
+
+  const sortedComplaints = useMemo(() => {
+    return [...complaints].sort((a, b) => {
+      const aResolved = a.status === "resolved"
+      const bResolved = b.status === "resolved"
+
+      // Keep active items first, and push resolved items to the end.
+      if (aResolved !== bResolved) return aResolved ? 1 : -1
+
+      const aPriority = Number(a.priority_score ?? 0)
+      const bPriority = Number(b.priority_score ?? 0)
+      return bPriority - aPriority
+    })
+  }, [complaints])
 
   const total = complaints.length
   const pending = complaints.filter((c) => c.status === "pending").length
@@ -148,7 +162,7 @@ export default function Dashboard() {
         )}
 
         {/* Empty state */}
-        {!loading && !error && complaints.length === 0 && (
+        {!loading && !error && sortedComplaints.length === 0 && (
           <div className="text-center py-24">
             <p className="text-4xl mb-3">📭</p>
             <p className="text-[#64748B] text-sm">No complaints match the current filters.</p>
@@ -156,9 +170,9 @@ export default function Dashboard() {
         )}
 
         {/* Complaint list */}
-        {!loading && !error && complaints.length > 0 && (
+        {!loading && !error && sortedComplaints.length > 0 && (
           <div className="space-y-4">
-            {complaints.map((complaint) => (
+            {sortedComplaints.map((complaint) => (
               <ComplaintCard
                 key={complaint.id}
                 complaint={complaint}
